@@ -2,8 +2,7 @@
 // define an absolute path to library directory
 // you don't have to set a constant but it is just good practice 
 // you can also use a variable or add the path directly below
-define('APPLICATION_LIBRARY','/home/maulik/workspace/scanmails/library');
-//define('APPLICATION_LIBRARY',realpath(dirname(__FILE__).'/library'));
+define('APPLICATION_LIBRARY',realpath(dirname(__FILE__).'/library'));
 // Note again: the path is the parent of your Zend folder, not the Zend folder itself.
 // now set the include path
 
