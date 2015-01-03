@@ -13,23 +13,46 @@ set_include_path(APPLICATION_LIBRARY);
 require_once 'Zend/Loader/Autoloader.php';
 require_once 'config.php';
 $autoloader = Zend_Loader_Autoloader::getInstance();
-$scannedAddresses=array();
+$scannedAddresses = array();
 
-ini_set('set_time_limit',0);
+// ini_set('set_time_limit',60);
 
 $storage = new Zend_Mail_Storage_Imap(array('host'=>$GMAIL_HOST,
 											  'port'=>$GMAIL_PORT,
 											  'ssl'=>$SSL,
 											  'user'=>$GMAIL_USERNAME,
 											  'password'=>$GMAIL_PASSWORD));
+
+$totalmailcount_file = 'totalmailcount.txt';
+// Write the contents back to the file
+file_put_contents($totalmailcount_file, count($storage));
                                          
-//echo '<h1>Total messages: ' . $storage->countMessages() . "</h1>\n";
 $validator=new Zend_Validate_EmailAddress();
 $i=0;$j=0;
+$db=Db::instance();
+
+$emails =  $db->select( 'subscriber', array( 'email' ) )->all(); // Select id & field columns
+foreach ( $emails as $email){
+	if(!in_array($email->email,$scannedAddresses)){
+		array_push($scannedAddresses, $email->email);
+	}
+}
 foreach ($storage as $messageNum => $message) {
 	$storage->noop(); // keep alive
-
-	$uid = $storage->getUniqueId( $messageNum);
+	$file = 'scanmailscount.txt';
+	// Open the file to get existing content
+	$current = file_get_contents($file);
+	
+	// Append a new person to the file
+	if($current == "" || $current >= count($storage) ){
+		$current = 0;
+	}else{
+		$messageNum = $current+1;
+		$current = $messageNum;
+	}
+	
+	
+	$uid = $storage->getUniqueId($messageNum);
 	//echo $uid;
 	
 	/*if($i==50){
@@ -43,6 +66,8 @@ foreach ($storage as $messageNum => $message) {
 			if($validator->isValid($matches[1][0])){
 				if(!in_array($matches[1][0],$scannedAddresses)){
 					array_push($scannedAddresses, $matches[1][0]);
+					$db->create('subscriber',array('email'=>$matches[1][0]));
+						
 				}							
 			}
 		}
@@ -50,6 +75,8 @@ foreach ($storage as $messageNum => $message) {
 			if($validator->isValid($from)){
 				if(!in_array($from,$scannedAddresses)){
 					array_push($scannedAddresses, $from);
+					$db->create('subscriber',array('email'=>$from));
+						
 				}
 			}
 		}
@@ -84,6 +111,8 @@ foreach ($storage as $messageNum => $message) {
 						if($validator->isValid($matches[1][0])){
 							if(!in_array($matches[1][0],$scannedAddresses)){
 								array_push($scannedAddresses, $matches[1][0]);
+								$db->create('subscriber',array('email'=>$matches[1][0]));
+								
 							}							
 						}
 					}
@@ -91,6 +120,7 @@ foreach ($storage as $messageNum => $message) {
 						if($validator->isValid($value)){
 							if(!in_array($value,$scannedAddresses)){
 								array_push($scannedAddresses, $value);
+								$db->create('subscriber',array('email'=>$value));
 							}
 						}
 					}
@@ -115,6 +145,7 @@ foreach ($storage as $messageNum => $message) {
 						if($validator->isValid($matches[1][0])){
 							if(!in_array($matches[1][0],$scannedAddresses)){
 								array_push($scannedAddresses, $matches[1][0]);
+								$db->create('subscriber',array('email'=>$matches[1][0]));
 							}
 						}
 					}
@@ -122,6 +153,8 @@ foreach ($storage as $messageNum => $message) {
 						if($validator->isValid($value)){
 							if(!in_array($value,$scannedAddresses)){
 								array_push($scannedAddresses, $value);
+								$db->create('subscriber',array('email'=>$value));
+								
 							}
 						}
 					}
@@ -174,21 +207,26 @@ foreach ($storage as $messageNum => $message) {
 		$temp=$matches[0];
 		for($k=0;$k<count($temp);$k++){
 			if(!in_array($temp[$k],$scannedAddresses)){
-				array_push($scannedAddresses, $temp[$k]);	
+				array_push($scannedAddresses, $temp[$k]);
+				$db->create('subscriber',array('email'=>$temp[$k]));
 			}
 		}
 	}
-
+	
+	// Write the contents back to the file
+	file_put_contents($file, $current);
+	
 	$i++;
 	$storage->noop(); // keep alive
 }
-$db=Db::instance();
 
+
+/*
 for($l=0;$l<count($scannedAddresses);$l++){
 	try{
 		$db->create('subscriber',array('email'=>$scannedAddresses[$l]));
 	}
 	catch(Exception $e){
 	}	
-}
+}*/
 //echo "Total Number of Messages Processed ".$i;
