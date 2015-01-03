@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+<link href="js/jquery-ui.css" rel="stylesheet">
+</head>
+<body>
+<script src="/js/jquery.js"></script>
+<script src="/js/jquery-ui.js"></script>
+<script type="text/javascript">
+	var mailScannerTimeout;
+	var pollTimeout;
+	var mail = {
+	    'scanmails': function() {
+	        $.ajax({
+	            type: 'POST',
+	            url: 'scanmails.php',
+	            async: true,
+	            success: function(response) {
+	                // Then clearn the timeout
+	                clearTimeout(mailScannerTimeout);
+	            },
+	            error: function(XMLHttpRequest, textStatus) {
+	                //some error has occured please try after 5 seconds
+	                mail.update();
+	                //alert("error","This Operation Could not be Completed. Please check your Internet Connection and try Again. If problem persists please contact Support");
+	            }
+	        });
+
+	    },
+	    'update': function() {
+	    	clearTimeout(mailScannerTimeout);
+	    	mailScannerTimeout = setTimeout(function() {
+	            mail.scanmails();
+	        }, 1000*60*10);
+	    }
+	};
+	
+	var counterTimeout;
+	var counter = {
+			'poll' : function(){
+					 $.ajax({
+			            type: 'POST',
+			            url: 'getscanmailupdate.php',
+			            dataType: "json",
+			            async: true,
+			            success: function(response) {
+			            
+			            var totalmails = response.totalmails;
+			            var currentscaned = response.currentscaned;
+			            var scaned_per = (currentscaned/totalmails)*100; 
+			            var prgressbar = $("#progressbar");
+			            $("#progressbar").progressbar('value', scaned_per);
+			            $("#scannedmails").html(currentscaned);
+			            $("#totalmails").html(totalmails);
+			            	console.log(response);
+			                // Then clearn the timeout
+			                clearTimeout(counterTimeout);
+			                counterTimeout = setTimeout(function() {
+			            		counter.poll();
+			                }, 1000*60);
+			            },
+			            error: function(XMLHttpRequest, textStatus) {
+			                //some error has occured please try after 5 seconds
+			                counter.poll();
+			                //alert("error","This Operation Could not be Completed. Please check your Internet Connection and try Again. If problem persists please contact Support");
+			            }
+			        });	
+			}
+	}
+	$(document).ready(function() {
+		//don't run scanmails from frontend as we should not run long running operations from front end,do run it from command line/terminal
+		mail.scanmails();
+		
+		counter.poll();
+		$( "#progressbar" ).progressbar({
+			value: 0
+		});
+	});
+</script>
+
+<h2 margin: 0% 0% 0% 5%;><div style="float:left;">Total Mail Scanned (</div><div id="scannedmails" name="scannedmails" style="float:left;"></div><div style="float:left;">/</div><div style="float:left;" id="totalmails" name="totalmails"></div>)</h2>
+<div id="progressbar" style="width:90%;margin:1% 5% 5% 5%;" >
+</div>
+</body>
+</html>
+
